@@ -39,6 +39,12 @@ func (*containerResource) Schema(ctx context.Context, req resource.SchemaRequest
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Podman Container resource",
 		Attributes: map[string]schema.Attribute{
+			"attach": schema.BoolAttribute{
+				Computed:            true,
+				Default:             booldefault.StaticBool(false),
+				MarkdownDescription: "If true, attach to the container after its creation and wait for its execution to finish. Resource creation fails if the container exits with a nonzero exit code. Defaults to `false`. Requires `start_immediately` to be `true`.",
+				Optional:            true,
+			},
 			"command": schema.ListAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,

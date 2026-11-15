@@ -131,6 +131,24 @@ func (co *containerResource) Create(ctx context.Context, req resource.CreateRequ
 
 		if err != nil {
 			resp.Diagnostics.AddError("Container start failed", err.Error())
+
+			return
+		}
+	}
+
+	if data.Attach.ValueBool() {
+		exitCode, err := c.ContainerWait(ctx, out.Id)
+
+		if err != nil {
+			resp.Diagnostics.AddError("Container wait failed", err.Error())
+
+			return
+		}
+
+		if exitCode != 0 {
+			resp.Diagnostics.AddError(
+				"Container execution failed",
+				fmt.Sprintf("Container %s exited with code %d.", out.Id, exitCode))
 		}
 	}
 }

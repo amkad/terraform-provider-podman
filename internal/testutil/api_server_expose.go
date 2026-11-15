@@ -17,6 +17,7 @@ func (s *ApiServer) Expose(baseURL *url.URL, timeout time.Duration) http.Handler
 	mux.HandleFunc("POST", "v5.0.0/libpod/containers/{nameOrId}/rename", s.handleContainerRename)
 	mux.HandleFunc("POST", "v5.0.0/libpod/containers/{nameOrId}/start", s.handleContainerStart)
 	mux.HandleFunc("POST", "v5.0.0/libpod/containers/{nameOrId}/stop", s.handleContainerStop)
+	mux.HandleFunc("POST", "v5.0.0/libpod/containers/{nameOrId}/wait", s.handleContainerWait)
 	mux.HandleFunc("POST", "v5.0.0/libpod/images/pull", s.handleImagePull)
 	mux.HandleFunc("DELETE", "v5.0.0/libpod/images/{nameOrId}", s.handleImageDelete)
 	mux.HandleFunc("GET", "v5.0.0/libpod/images/{nameOrId}/json", s.handleImageGet)

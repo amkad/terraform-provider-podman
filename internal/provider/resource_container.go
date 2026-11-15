@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework-nettypes/iptypes"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -82,6 +83,7 @@ type containerResourceUploadModel struct {
 }
 
 type containerResourceModel struct {
+	Attach           types.Bool   `tfsdk:"attach"`
 	Command          types.List   `tfsdk:"command"`
 	ContainerHost    types.String `tfsdk:"container_host"`
 	Devices          types.List   `tfsdk:"devices"`
@@ -120,6 +122,22 @@ func (*containerResource) Metadata(ctx context.Context, req resource.MetadataReq
 
 func (r *containerResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	importState(ctx, req, resp)
+}
+
+func (*containerResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var data containerResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if data.Attach.ValueBool() && data.StartImmediately.Equal(types.BoolValue(false)) {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("attach"),
+			"Invalid attach configuration",
+			"attach cannot be true when start_immediately is false.")
+	}
 }
 
 func (u *containerResourceUploadModel) key() containerResourceUploadKey {

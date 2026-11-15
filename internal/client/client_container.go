@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 
 	"github.com/decafcode/terraform-provider-podman/internal/api"
 )
@@ -99,4 +101,46 @@ func (c *Client) ContainerStop(ctx context.Context, nameOrId string) error {
 	}
 
 	return err
+}
+
+func (c *Client) ContainerWait(ctx context.Context, nameOrId string) (int32, error) {
+	path := fmt.Sprintf("v5.0.0/libpod/containers/%s/wait", url.PathEscape(nameOrId))
+	relUrl, err := url.Parse(path)
+
+	if err != nil {
+		return 0, err
+	}
+
+	absUrl := c.urlBase.ResolveReference(relUrl).String()
+	req, err := http.NewRequestWithContext(ctx, "POST", absUrl, nil)
+
+	if err != nil {
+		return 0, err
+	}
+
+	resp, err := c.http.Do(req)
+
+	if err != nil {
+		return 0, err
+	}
+
+	defer resp.Body.Close()
+
+	if err := checkStatus(resp); err != nil {
+		return 0, err
+	}
+
+	body, err := io.ReadAll(resp.Body)
+
+	if err != nil {
+		return 0, err
+	}
+
+	exitCode, err := strconv.ParseInt(strings.TrimSpace(string(body)), 10, 32)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return int32(exitCode), nil
 }

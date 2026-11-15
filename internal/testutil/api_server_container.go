@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"slices"
+	"strconv"
 
 	"github.com/decafcode/terraform-provider-podman/internal/api"
 )
@@ -198,6 +199,36 @@ func (s *ApiServer) handleContainerStop(ctx context.Context, resp http.ResponseW
 	match.Running = false
 
 	return nil
+}
+
+func (s *ApiServer) handleContainerWait(ctx context.Context, resp http.ResponseWriter, req *http.Request) error {
+	s.mutex.Lock()
+	nameOrId := req.PathValue("nameOrId")
+	match, err := s.lookupContainer(nameOrId)
+	s.mutex.Unlock()
+
+	if err != nil {
+		return err
+	}
+
+	var exitCode int32
+
+	if s.ContainerWait != nil {
+		exitCode, err = s.ContainerWait(ctx, nameOrId)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	s.mutex.Lock()
+	match.Running = false
+	s.mutex.Unlock()
+
+	resp.Header().Set("content-type", "text/plain")
+	_, err = io.WriteString(resp, strconv.FormatInt(int64(exitCode), 10))
+
+	return err
 }
 
 // Snapshot the internal state of a container spec inside the test API server

@@ -92,6 +92,7 @@ resource "podman_container" "postgres_17" {
 
 ### Optional
 
+- `attach` (Boolean) If true, attach to the container after its creation and wait for its execution to finish. Resource creation fails if the container exits with a nonzero exit code. Defaults to `false`. Requires `start_immediately` to be `true`.
 - `command` (List of String) Override the default command specified by this container's image.
 - `container_host` (String) URL of the container host where this resource resides
 - `devices` (Attributes List) A list of device nodes to make available to the container. (see [below for nested schema](#nestedatt--devices))

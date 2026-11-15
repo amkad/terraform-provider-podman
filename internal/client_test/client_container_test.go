@@ -2,10 +2,18 @@ package client
 
 import (
 	"archive/tar"
+	"context"
 	"encoding/base64"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/decafcode/terraform-provider-podman/internal/api"
+	"github.com/decafcode/terraform-provider-podman/internal/client"
 	"github.com/decafcode/terraform-provider-podman/internal/testutil"
 	"gotest.tools/v3/assert"
 )
@@ -214,4 +222,142 @@ func TestContainerStop(t *testing.T) {
 	result, err := apiServer.CaptureContainer(c.Json.Name)
 	assert.NilError(t, err)
 	assert.Equal(t, result.Running, false)
+}
+
+func TestContainerWait(t *testing.T) {
+	for _, exitCode := range []int32{0, 17} {
+		t.Run(fmt.Sprintf("exit_%d", exitCode), func(t *testing.T) {
+			container := &testutil.TestContainer{
+				Id:      "1",
+				Json:    api.ContainerCreateJson{Name: "test"},
+				Running: true,
+			}
+			started := make(chan struct{})
+			completed := make(chan struct{}, 1)
+			apiServer := &testutil.ApiServer{
+				Containers: []*testutil.TestContainer{container},
+				ContainerWait: func(ctx context.Context, _ string) (int32, error) {
+					close(started)
+
+					select {
+					case <-completed:
+						return exitCode, nil
+					case <-ctx.Done():
+						return 0, ctx.Err()
+					}
+				},
+			}
+			f, err := spawnFramework(t.Context(), apiServer)
+			assert.NilError(t, err)
+			defer f.Stop(t.Context())
+			defer close(completed)
+
+			type result struct {
+				exitCode int32
+				err      error
+			}
+			resultCh := make(chan result, 1)
+
+			go func() {
+				code, err := f.ContainerWait(t.Context(), container.Json.Name)
+				resultCh <- result{exitCode: code, err: err}
+			}()
+
+			select {
+			case <-started:
+			case result := <-resultCh:
+				t.Fatalf("wait returned before waiting for execution: %+v", result)
+			}
+
+			select {
+			case result := <-resultCh:
+				t.Fatalf("wait returned before execution completed: %+v", result)
+			default:
+			}
+
+			completed <- struct{}{}
+			actual := <-resultCh
+			assert.NilError(t, actual.err)
+			assert.Equal(t, actual.exitCode, exitCode)
+
+			capture, err := apiServer.CaptureContainer(container.Id)
+			assert.NilError(t, err)
+			assert.Equal(t, capture.Running, false)
+		})
+	}
+}
+
+func TestContainerWaitCancellation(t *testing.T) {
+	started := make(chan struct{})
+	completed := make(chan struct{})
+	apiServer := &testutil.ApiServer{
+		Containers: []*testutil.TestContainer{{Id: "1", Running: true}},
+		ContainerWait: func(ctx context.Context, _ string) (int32, error) {
+			close(started)
+
+			select {
+			case <-completed:
+				return 0, nil
+			case <-ctx.Done():
+				return 0, ctx.Err()
+			}
+		},
+	}
+	f, err := spawnFramework(t.Context(), apiServer)
+	assert.NilError(t, err)
+	defer f.Stop(t.Context())
+	defer close(completed)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	result := make(chan error, 1)
+
+	go func() {
+		_, err := f.ContainerWait(ctx, "1")
+		result <- err
+	}()
+
+	select {
+	case <-started:
+	case err := <-result:
+		t.Fatalf("wait returned before cancellation: %v", err)
+	}
+	cancel()
+	assert.ErrorIs(t, <-result, context.Canceled)
+}
+
+func TestContainerWaitErrors(t *testing.T) {
+	testCases := []struct {
+		name   string
+		status int
+		body   string
+		error  string
+	}{
+		{name: "not_found", status: http.StatusNotFound, body: "container not found", error: "container not found"},
+		{name: "server_error", status: http.StatusInternalServerError, body: "wait failed", error: "wait failed"},
+		{name: "invalid_exit_code", status: http.StatusOK, body: "invalid", error: "invalid syntax"},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
+				assert.Equal(t, req.Method, http.MethodPost)
+				assert.Equal(t, req.URL.Path, "/subpath/v5.0.0/libpod/containers/test/wait")
+				resp.Header().Set("content-type", "text/plain")
+				resp.WriteHeader(testCase.status)
+				_, err := io.WriteString(resp, testCase.body)
+				assert.NilError(t, err)
+			}))
+			defer server.Close()
+
+			clientUrl, err := url.Parse(strings.Replace(server.URL, "http://", "tcp://", 1) + "/subpath/")
+			assert.NilError(t, err)
+			c, err := client.Connect(t.Context(), clientUrl, nil)
+			assert.NilError(t, err)
+			defer c.Close()
+
+			_, err = c.ContainerWait(t.Context(), "test")
+			assert.ErrorContains(t, err, testCase.error)
+		})
+	}
 }

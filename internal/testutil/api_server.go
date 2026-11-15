@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -32,6 +33,7 @@ type TestContainer struct {
 
 type ApiServer struct {
 	Auth            *api.RegistryAuth
+	ContainerWait   func(context.Context, string) (int32, error)
 	Containers      []*TestContainer
 	Images          []*api.ImageJson
 	Networks        []*api.NetworkJson
