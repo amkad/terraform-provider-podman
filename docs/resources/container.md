@@ -98,6 +98,7 @@ resource "podman_container" "postgres_17" {
 - `entrypoint` (List of String) Override the container entry point supplied by the image.
 - `env` (Map of String) Environment variables to set in this container. This is in addition to any environment variables specified by the image.
 - `health` (Attributes) Override the health check specified by the container image. All durations are in floating-point seconds, and any omitted values will default to the value specified by the container image. (see [below for nested schema](#nestedatt--health))
+- `hostname` (String) Hostname of the container.
 - `labels` (Map of String) Labels to attach to this container in the Podman and Docker API.
 - `mounts` (Attributes List) A list of host filesystem locations or block devices to mount into the container's mount namespace.
 

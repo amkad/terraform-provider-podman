@@ -88,6 +88,7 @@ type containerResourceModel struct {
 	Entrypoint       types.List   `tfsdk:"entrypoint"`
 	Env              types.Map    `tfsdk:"env"`
 	Health           types.Object `tfsdk:"health"`
+	Hostname         types.String `tfsdk:"hostname"`
 	Id               types.String `tfsdk:"id"`
 	Image            types.String `tfsdk:"image"`
 	Labels           types.Map    `tfsdk:"labels"`

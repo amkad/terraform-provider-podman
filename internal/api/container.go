@@ -54,6 +54,7 @@ type ContainerCreateJson struct {
 	Env           map[string]string                     `json:"env,omitempty"`
 	Entrypoint    []string                              `json:"entrypoint,omitempty"`
 	HealthConfig  *ContainerCreateHealthConfigJson      `json:"healthconfig,omitempty"`
+	Hostname      string                                `json:"hostname,omitempty"`
 	Labels        map[string]string                     `json:"labels"`
 	Mounts        []ContainerCreateMountJson            `json:"mounts,omitempty"`
 	Netns         ContainerCreateNamespaceJson          `json:"netns"`

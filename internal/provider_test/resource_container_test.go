@@ -38,6 +38,7 @@ func TestAccContainerResource(t *testing.T) {
 						command        = ["cmd"]
 						container_host = "%s"
 						entrypoint     = ["/bin/sh", "-c"]
+						hostname       = "test-hostname"
 						image          = "example.com/library/test:v1.0.0"
 						name           = "test"
 						restart_policy = "always"
@@ -129,6 +130,7 @@ func TestAccContainerResource(t *testing.T) {
 						Json: api.ContainerCreateJson{
 							Command:       []string{"cmd"},
 							Entrypoint:    []string{"/bin/sh", "-c"},
+							Hostname:      "test-hostname",
 							Image:         "example.com/library/test:v1.0.0",
 							Name:          "test",
 							RestartPolicy: "always",
@@ -516,6 +518,10 @@ func TestAccContainerResourceAttributeRemoval(t *testing.T) {
 		{
 			attribute: "health",
 			value:     `{ check = { disabled = true } }`,
+		},
+		{
+			attribute: "hostname",
+			value:     `"test-hostname"`,
 		},
 		{
 			attribute: "labels",

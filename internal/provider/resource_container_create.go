@@ -29,6 +29,7 @@ func (co *containerResource) Create(ctx context.Context, req resource.CreateRequ
 	in := api.ContainerCreateJson{
 		Command:       make([]string, 0),
 		Env:           make(map[string]string, 0),
+		Hostname:      data.Hostname.ValueString(),
 		Image:         data.Image.ValueString(),
 		Name:          data.Name.ValueString(),
 		Networks:      make(map[string]api.ContainerCreateNetworkJson, 0),

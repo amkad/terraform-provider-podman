@@ -152,6 +152,13 @@ func (*containerResource) Schema(ctx context.Context, req resource.SchemaRequest
 					objectplanmodifier.RequiresReplace(),
 				},
 			},
+			"hostname": schema.StringAttribute{
+				MarkdownDescription: "Hostname of the container.",
+				Optional:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
 			"id": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "Container ID assigned by Podman",
